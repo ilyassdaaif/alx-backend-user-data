@@ -16,18 +16,8 @@ def filter_datum(
 ) -> str:
     """
     Obfuscates specified fields in the log message.
-
-    Args:
-        fields: List of strings representing fields to obfuscate.
-        redaction: String to replace sensitive information with.
-        message: String representing the log line.
-        separator: String representing the character separating fields
-        in the log line.
-
-    Returns:
-        Obfuscated log message.
     """
-    pattern = f'({"|".join(map(re.escape, fields))})[^{separator}]*'
+    pattern = f'({"|".join(map(re.escape, fields))})=[^{separator}]*'
     return re.sub(pattern, f'\\1={redaction}', message)
 
 
@@ -44,6 +34,6 @@ class RedactingFormatter(logging.Formatter):
         self.fields = fields
 
     def format(self, record: logging.LogRecord) -> str:
-        record.msg = filter_datum(self.fields, self.REDACTION,
-                                  record.getMessage(), self.SEPARATOR)
-        return super(RedactingFormatter, self).format(record)
+        message = super(RedactingFormatter, self).format(record)
+        return filter_datum(self.fields, self.REDACTION,
+                            message, self.SEPARATOR)
