@@ -8,12 +8,8 @@ from typing import List
 import logging
 
 
-def filter_datum(
-        fields: List[str],
-        redaction: str,
-        message: str,
-        separator: str
-) -> str:
+def filter_datum(fields: List[str], redaction: str, message: str,
+                 separator: str) -> str:
     """
     Obfuscates specified fields in the log message.
     """
