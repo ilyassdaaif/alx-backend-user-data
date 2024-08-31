@@ -1,35 +1,76 @@
 #!/usr/bin/env python3
 """
-Module for handling personal data
+Module for handling Personal Data
 """
-
 from typing import List
 import re
 import logging
+from os import environ
 import mysql.connector
-import os
 
-# PII fields
+
 PII_FIELDS = ("name", "email", "phone", "ssn", "password")
 
 
-def filter_datum(
-        fields: List[str],
-        redaction: str,
-        message: str,
-        separator: str
-) -> str:
-    """
-    Obfuscates specified fields in the log message.
-    """
-    for field in fields:
-        message = re.sub(f'{field}=.*?{separator}',
-                         f'{field}={redaction}{separator}', message)
+def filter_datum(fields: List[str], redaction: str,
+                 message: str, separator: str) -> str:
+    """ Returns a log message obfuscated """
+    for f in fields:
+        message = re.sub(f'{f}=.*?{separator}',
+                         f'{f}={redaction}{separator}', message)
     return message
 
 
+def get_logger() -> logging.Logger:
+    """ Returns a Logger Object """
+    logger = logging.getLogger("user_data")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(RedactingFormatter(list(PII_FIELDS)))
+    logger.addHandler(stream_handler)
+
+    return logger
+
+
+def get_db() -> mysql.connector.connection.MySQLConnection:
+    """ Returns a connector to a MySQL database """
+    username = environ.get("PERSONAL_DATA_DB_USERNAME", "root")
+    password = environ.get("PERSONAL_DATA_DB_PASSWORD", "")
+    host = environ.get("PERSONAL_DATA_DB_HOST", "localhost")
+    db_name = environ.get("PERSONAL_DATA_DB_NAME")
+
+    cnx = mysql.connector.connection.MySQLConnection(user=username,
+                                                     password=password,
+                                                     host=host,
+                                                     database=db_name)
+    return cnx
+
+
+def main():
+    """
+    Obtain a database connection using get_db and retrieves all rows
+    in the users table and display each row under a filtered format
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM users;")
+    field_names = [i[0] for i in cursor.description]
+
+    logger = get_logger()
+
+    for row in cursor:
+        str_row = ''.join(f'{f}={str(r)}; ' for r, f in zip(row, field_names))
+        logger.info(str_row.strip())
+
+    cursor.close()
+    db.close()
+
+
 class RedactingFormatter(logging.Formatter):
-    """ Redacting Formatter class """
+    """ Redacting Formatter class
+        """
 
     REDACTION = "***"
     FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
@@ -40,61 +81,11 @@ class RedactingFormatter(logging.Formatter):
         self.fields = fields
 
     def format(self, record: logging.LogRecord) -> str:
-        log_message = super(RedactingFormatter, self).format(record)
-        return filter_datum(self.fields, self.REDACTION,
-                            log_message, self.SEPARATOR)
+        """ Filters values in incoming log records using filter_datum """
+        record.msg = filter_datum(self.fields, self.REDACTION,
+                                  record.getMessage(), self.SEPARATOR)
+        return super(RedactingFormatter, self).format(record)
 
 
-def get_logger() -> logging.Logger:
-    """
-    Returns a logging.Logger object
-    """
-    logger = logging.getLogger("user_data")
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(RedactingFormatter(PII_FIELDS))
-
-    logger.addHandler(stream_handler)
-
-    return logger
-
-
-def get_db() -> mysql.connector.connection.MySQLConnection:
-    """
-    Returns a connector to the MySQL database
-    """
-    username = os.environ.get('PERSONAL_DATA_DB_USERNAME', 'root')
-    password = os.environ.get('PERSONAL_DATA_DB_PASSWORD', '')
-    host = os.environ.get('PERSONAL_DATA_DB_HOST', 'localhost')
-    db_name = os.environ.get('PERSONAL_DATA_DB_NAME')
-
-    if not db_name:
-        raise ValueError(
-                "PERSONAL_DATA_DB_NAME environment variable is not set"
-        )
-
-    try:
-        connection = mysql.connector.connect(
-            user=username,
-            password=password,
-            host=host,
-            database=db_name
-        )
-        return connection
-    except mysql.connector.Error as err:
-        if err.errno == mysql.connector.errorcode.ER_ACCESS_DENIED_ERROR:
-            raise Exception(
-                    "Error: Access denied. Check your username and password."
-            )
-        elif err.errno == mysql.connector.errorcode.ER_BAD_DB_ERROR:
-            raise Exception(f"Error: Database '{db_name}' does not exist.")
-        else:
-            raise Exception(f"Error: {err}")
-
-
-if __name__ == "__main__":
-    logger = get_logger()
-    logger.info("Sample log with PII data:name=John;email=john@example.com;"
-                "ssn=123-45-6789;password=secret;")
+if __name__ == '__main__':
+    main()
