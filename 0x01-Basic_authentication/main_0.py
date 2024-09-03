@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """ Main 0
 """
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from api.v1.auth.auth import Auth
 
 a = Auth()
