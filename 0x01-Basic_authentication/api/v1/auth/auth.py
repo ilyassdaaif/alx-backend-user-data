@@ -1,4 +1,4 @@
-#!/usir/bin/env python3
+#!/usr/bin/env python3
 """Auth class for the API"""
 from flask import request
 from typing import List, TypeVar
@@ -9,21 +9,20 @@ class Auth:
 
     def require_auth(self, path: str, excluded_paths: List[str]) -> bool:
         """
-        Determines if authentication is required for a given path
-        Returns False for now
+        Determines whether a given path requires authentication.
+        Returns False for now.
         """
         return False
 
     def authorization_header(self, request=None) -> str:
         """
-        Checks for authorization header
-        Returns None for now
+        Returns None for now - will be used to get the
+        authorization header from the request.
         """
         return None
 
     def current_user(self, request=None) -> TypeVar('User'):
         """
-        Gets the current user
-        Returns None for now
+        Returns None for now - will be used to get the current user.
         """
         return None
