@@ -49,12 +49,14 @@ def before_request_func():
     if auth.current_user(request) is None:
         abort(403)
 
+
 # Custom error handler for 401 Unauthorized
 @app.errorhandler(401)
 def handle_401(error):
     response = jsonify({"error": "Unauthorized"})
     response.status_code = 401
     return response
+
 
 # Custom error handler for 403 Forbidden
 @app.errorhandler(403)
