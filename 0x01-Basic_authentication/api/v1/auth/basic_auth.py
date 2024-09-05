@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """BasicAuth class for the API"""
+
 from api.v1.auth.auth import Auth
 import base64
+
 
 class BasicAuth(Auth):
     """BasicAuth class to manage API authentication"""
@@ -11,16 +13,15 @@ class BasicAuth(Auth):
     ) -> str:
         """
         Extracts the Base64 part of the Authorization header
-        for a Basic Authentication
+        for Basic Authentication.
         """
-        if authorization_header is None:
-            return None
-        if not isinstance(authorization_header, str):
+        if authorization_header is None or not isinstance(
+                authorization_header, str
+        ):
             return None
         if not authorization_header.startswith("Basic "):
             return None
-
-        return authorization_header.split(" ")[1]
+        return authorization_header[6:]
 
     def decode_base64_authorization_header(
             self, base64_authorization_header: str
