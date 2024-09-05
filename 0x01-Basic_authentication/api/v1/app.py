@@ -1,42 +1,56 @@
 #!/usr/bin/env python3
-"""App module"""
-from flask import Flask, jsonify, request, abort
+"""
+Route module for the API
+"""
 from os import getenv
+from api.v1.views import app_views
+from flask import Flask, jsonify, abort, request
+from flask_cors import (CORS, cross_origin)
+import os
 
-# Import your Auth classes
-from api.v1.auth.auth import Auth
-from api.v1.auth.basic_auth import BasicAuth
 
 app = Flask(__name__)
-
-# Determine which authentication class to use
+app.register_blueprint(app_views)
+CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
 auth = None
-auth_type = getenv("AUTH_TYPE")
+AUTH_TYPE = getenv("AUTH_TYPE")
 
-if auth_type == "basic_auth":
-    auth = BasicAuth()
-else:
+if AUTH_TYPE == "auth":
+    from api.v1.auth.auth import Auth
     auth = Auth()
+elif AUTH_TYPE == "basic_auth":
+    from api.v1.auth.basic_auth import BasicAuth
+    auth = BasicAuth()
 
 
-@app.route('/api/v1/status', methods=['GET'], strict_slashes=False)
-def get_status():
-    return jsonify({"status": "OK"})
+@app.errorhandler(404)
+def not_found(error) -> str:
+    """ Not found handler
+    """
+    return jsonify({"error": "Not found"}), 404
 
 
-@app.route('/api/v1/unauthorized', methods=['GET'], strict_slashes=False)
-def unauthorized():
-    abort(401)
+@app.errorhandler(401)
+def unauthorized(error) -> str:
+    """ Unauthorized handler
+    """
+    return jsonify({"error": "Unauthorized"}), 401
 
 
-@app.route('/api/v1/forbidden', methods=['GET'], strict_slashes=False)
-def forbidden():
-    abort(403)
+@app.errorhandler(403)
+def forbidden(error) -> str:
+    """ Forbidden handler
+    """
+    return jsonify({"error": "Forbidden"}), 403
 
 
 @app.before_request
-def before_request_func():
-    """Check if request requires authentication"""
+def before_request():
+    """ Before request handler
+    """
+    if auth is None:
+        return
+
     excluded_paths = [
         '/api/v1/status/', '/api/v1/unauthorized/', '/api/v1/forbidden/'
     ]
@@ -50,23 +64,7 @@ def before_request_func():
         abort(403)
 
 
-# Custom error handler for 401 Unauthorized
-@app.errorhandler(401)
-def handle_401(error):
-    response = jsonify({"error": "Unauthorized"})
-    response.status_code = 401
-    return response
-
-
-# Custom error handler for 403 Forbidden
-@app.errorhandler(403)
-def handle_403(error):
-    response = jsonify({"error": "Forbidden"})
-    response.status_code = 403
-    return response
-
-
 if __name__ == "__main__":
     host = getenv("API_HOST", "0.0.0.0")
-    port = int(getenv("API_PORT", 5000))
+    port = getenv("API_PORT", "5000")
     app.run(host=host, port=port)
