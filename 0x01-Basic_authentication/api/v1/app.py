@@ -1,53 +1,44 @@
 #!/usr/bin/env python3
 """
-Route module for the API
+App module
 """
-from os import getenv
-from api.v1.views import app_views
 from flask import Flask, jsonify, abort, request
-from flask_cors import (CORS, cross_origin)
-import os
+from os import getenv
 
+# Import your Auth classes
+from api.v1.auth.auth import Auth
+from api.v1.auth.basic_auth import BasicAuth
 
 app = Flask(__name__)
-app.register_blueprint(app_views)
-CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
-auth = None
-AUTH_TYPE = getenv("AUTH_TYPE")
 
-if AUTH_TYPE == "auth":
-    from api.v1.auth.auth import Auth
+# Determine which authentication class to use
+auth = None
+auth_type = getenv("AUTH_TYPE")
+
+if auth_type == "basic_auth":
+    auth = BasicAuth()
+else:
     auth = Auth()
 
 
-@app.errorhandler(404)
-def not_found(error) -> str:
-    """ Not found handler
-    """
-    return jsonify({"error": "Not found"}), 404
+@app.route('/api/v1/status', methods=['GET'])
+def get_status():
+    return jsonify({"status": "OK"})
 
 
-@app.errorhandler(401)
-def unauthorized(error) -> str:
-    """ Unauthorized handler
-    """
-    return jsonify({"error": "Unauthorized"}), 401
+@app.route('/api/v1/unauthorized', methods=['GET'])
+def unauthorized():
+    abort(401)
 
 
-@app.errorhandler(403)
-def forbidden(error) -> str:
-    """ Forbidden handler
-    """
-    return jsonify({"error": "Forbidden"}), 403
+@app.route('/api/v1/forbidden', methods=['GET'])
+def forbidden():
+    abort(403)
 
 
 @app.before_request
-def before_request():
-    """ Before request handler
-    """
-    if auth is None:
-        return
-
+def before_request_func():
+    """Check if request requires authentication"""
     excluded_paths = [
             '/api/v1/status/', '/api/v1/unauthorized/', '/api/v1/forbidden/'
     ]
@@ -63,5 +54,5 @@ def before_request():
 
 if __name__ == "__main__":
     host = getenv("API_HOST", "0.0.0.0")
-    port = getenv("API_PORT", "5000")
+    port = int(getenv("API_PORT", 5000))
     app.run(host=host, port=port)
