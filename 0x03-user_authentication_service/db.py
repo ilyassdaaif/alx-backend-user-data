@@ -5,8 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
-
-from user import Base, User
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import InvalidRequestError
+from user import User
+from user import Base
 
 
 class DB:
@@ -45,3 +47,28 @@ class DB:
         self._session.add(user)
         self._session.commit()
         return user
+
+    def find_user_by(self, **kwargs):
+        """
+        Find a user in the database based on input criteria.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments to filter the search.
+
+        Returns:
+            User: The first user found matching the criteria.
+
+        Raises:
+            NoResultFound: If no user is found matching the criteria.
+            InvalidRequestError: If invalid query arguments are passed.
+        """
+        try:
+            # Attempt to query the database with the provided filters
+            user = self._session.query(User).filter_by(**kwargs).one()
+            return user
+        except NoResultFound:
+            # Re-raise NoResultFound exception
+            raise
+        except InvalidRequestError:
+            # This exception is raised when invalid query arguments are passed
+            raise
