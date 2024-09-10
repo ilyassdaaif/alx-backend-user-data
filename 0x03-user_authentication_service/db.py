@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import IntegrityError
 from user import User
 from user import Base
 
@@ -15,18 +15,16 @@ class DB:
     """DB class
     """
 
-    def __init__(self) -> None:
-        """Initialize a new DB instance
-        """
-        self._engine = create_engine("sqlite:///a.db", echo=True)
+    def __init__(self):
+        """Initialize a new DB instance"""
+        self._engine = create_engine("sqlite:///a.db", echo=False)
         Base.metadata.drop_all(self._engine)
         Base.metadata.create_all(self._engine)
         self.__session = None
 
     @property
-    def _session(self) -> Session:
-        """Memoized session object
-        """
+    def _session(self):
+        """Memoized session object"""
         if self.__session is None:
             DBSession = sessionmaker(bind=self._engine)
             self.__session = DBSession()
@@ -42,11 +40,18 @@ class DB:
 
         Returns:
             User: The newly created user object.
+
+        Raises:
+            ValueError: If a user with the given email already exists.
         """
-        user = User(email=email, hashed_password=hashed_password)
-        self._session.add(user)
-        self._session.commit()
-        return user
+        try:
+            new_user = User(email=email, hashed_password=hashed_password)
+            self._session.add(new_user)
+            self._session.commit()
+            return new_user
+        except IntegrityError:
+            self._session.rollback()
+            raise ValueError(f"User {email} already exists")
 
     def find_user_by(self, **kwargs):
         """
