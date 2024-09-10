@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from user import User
 from user import Base
 
@@ -53,7 +53,7 @@ class DB:
             self._session.rollback()
             raise ValueError(f"User {email} already exists")
 
-    def find_user_by(self, **kwargs):
+    def find_user_by(self, **kwargs) -> User:
         """
         Find a user in the database based on input criteria.
 
@@ -67,13 +67,13 @@ class DB:
             NoResultFound: If no user is found matching the criteria.
             InvalidRequestError: If invalid query arguments are passed.
         """
+        if not kwargs:
+            raise InvalidRequestError
+
         try:
-            # Attempt to query the database with the provided filters
-            user = self._session.query(User).filter_by(**kwargs).one()
+            user = self._session.query(User).filter_by(**kwargs).first()
+            if user is None:
+                raise NoResultFound
             return user
-        except NoResultFound:
-            # Re-raise NoResultFound exception
-            raise
         except InvalidRequestError:
-            # This exception is raised when invalid query arguments are passed
             raise
