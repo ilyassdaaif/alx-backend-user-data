@@ -10,8 +10,7 @@ auth = Auth()
 
 auth.register_user(email, password)
 
-print(auth.valid_login(email, password))
+print("User registered, now creating session...")
 
-print(auth.valid_login(email, "WrongPwd"))
-
-print(auth.valid_login("unknown@email", password))
+print(auth.create_session(email))
+print(auth.create_session("unknown@email.com"))
