@@ -66,4 +66,6 @@ class Auth:
         Returns:
             str: A string representation of a new UUID.
         """
-        return str(uuid.uuid1())
+        new_uuid = str(uuid.uuid4())
+        print(f"Generated UUID: {new_uuid}")  # For debugging purposes
+        return new_uuid
