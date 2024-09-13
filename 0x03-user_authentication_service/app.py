@@ -2,7 +2,7 @@
 """
 Flask app for user authentication service
 """
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, redirect, url_for
 from auth import Auth
 
 app = Flask(__name__)
@@ -40,6 +40,18 @@ def login():
     response = jsonify({"email": email, "message": "logged in"})
     response.set_cookie("session_id", session_id)
     return response
+
+
+@app.route('/session', methods=['DELETE'])
+def logout():
+    """Handle user logout and session destruction"""
+    session_id = request.cookies.get("session_id")
+    user = AUTH.get_user_from_session_id(session_id)
+    if user:
+        AUTH.destroy_session(user.id)
+        return redirect(url_for('welcome'))
+    else:
+        abort(403)
 
 
 if __name__ == "__main__":
