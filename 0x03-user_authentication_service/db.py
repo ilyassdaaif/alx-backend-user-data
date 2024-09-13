@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-"""DB module
-"""
+""" Database for ORM """
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError, InvalidRequestError
-from user import User
-from user import Base
+from typing import TypeVar
+from user import Base, User
 
 
 class DB:
-    """DB class
-    """
+    """ DB Class for Object Reational Mapping """
 
     def __init__(self):
-        """Initialize a new DB instance"""
+        """ Constructor Method """
         self._engine = create_engine("sqlite:///a.db", echo=False)
         Base.metadata.drop_all(self._engine)
         Base.metadata.create_all(self._engine)
@@ -24,81 +21,53 @@ class DB:
 
     @property
     def _session(self):
-        """Memoized session object"""
+        """ Session Getter Method """
         if self.__session is None:
             DBSession = sessionmaker(bind=self._engine)
             self.__session = DBSession()
         return self.__session
 
     def add_user(self, email: str, hashed_password: str) -> User:
+        """ Adds user to database
+        Return: User Object
         """
-        Add a new user to the database.
+        user = User(email=email, hashed_password=hashed_password)
+        self._session.add(user)
+        self._session.commit()
 
-        Args:
-            email (str): The email address of the user.
-            hashed_password (str): The hashed password of the user.
-
-        Returns:
-            User: The newly created user object.
-
-        Raises:
-            ValueError: If a user with the given email already exists.
-        """
-        try:
-            new_user = User(email=email, hashed_password=hashed_password)
-            self._session.add(new_user)
-            self._session.commit()
-            return new_user
-        except IntegrityError:
-            self._session.rollback()
-            raise ValueError(f"User {email} already exists")
+        return user
 
     def find_user_by(self, **kwargs) -> User:
-        """
-        Find a user in the database based on input criteria.
-
-        Args:
-            **kwargs: Arbitrary keyword arguments to filter the search.
-
-        Returns:
-            User: The first user found matching the criteria.
-
-        Raises:
-            NoResultFound: If no user is found matching the criteria.
-            InvalidRequestError: If invalid query arguments are passed.
+        """ Finds user by key word args
+        Return: First row found in the users table as filtered by kwargs
         """
         if not kwargs:
             raise InvalidRequestError
 
-        try:
-            user = self._session.query(User).filter_by(**kwargs).first()
-            if user is None:
-                raise NoResultFound
-            return user
-        except InvalidRequestError:
-            raise
+        column_names = User.__table__.columns.keys()
+        for key in kwargs.keys():
+            if key not in column_names:
+                raise InvalidRequestError
+
+        user = self._session.query(User).filter_by(**kwargs).first()
+
+        if user is None:
+            raise NoResultFound
+
+        return user
 
     def update_user(self, user_id: int, **kwargs) -> None:
+        """ Update users attributes
+        Returns: None
         """
-        Update user attributes baed on the provided user_id
-        and keyword arguments.
+        user = self.find_user_by(id=user_id)
 
-        Args:
-            user_id (int): The ID of the user to update.
-            **kwargs: Arbitrary keyword arguments representing
-            user attributes to update.
+        column_names = User.__table__.columns.keys()
+        for key in kwargs.keys():
+            if key not in column_names:
+                raise ValueError
 
-        Raises:
-            ValueError: If an invalid attribute is provided.
-            NoResultFound: If no user is found with the given user_id.
-        """
-        try:
-            user = self.find_user_by(id=user_id)
-            for key, value in kwargs.items():
-                if hasattr(user, key):
-                    setattr(user, key, value)
-                else:
-                    raise ValueError(f"Invalid attribute: {key}")
-            self._session.commit()
-        except NoResultFound:
-            raise
+        for key, value in kwargs.items():
+            setattr(user, key, value)
+
+        self._session.commit()

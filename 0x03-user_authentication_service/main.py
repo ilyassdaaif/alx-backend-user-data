@@ -10,7 +10,5 @@ auth = Auth()
 
 auth.register_user(email, password)
 
-print("User registered, now creating session...")
-
 print(auth.create_session(email))
 print(auth.create_session("unknown@email.com"))
