@@ -11,7 +11,7 @@ AUTH = Auth()
 
 @app.route('/', methods=['GET'])
 def welcome():
-    """Return a payload for the root route"""
+    """ a payload for the root route"""
     return jsonify({"message": "Bienvenue"})
 
 
@@ -42,7 +42,7 @@ def login():
     return response
 
 
-@app.route('/session', methods=['DELETE'])
+@app.route('/sessions', methods=['DELETE'])
 def logout():
     """Handle user logout and session destruction"""
     session_id = request.cookies.get("session_id")
@@ -55,4 +55,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port="5000")
+    app.run(host="0.0.0.0", port=5000)
