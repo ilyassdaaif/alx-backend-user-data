@@ -7,18 +7,31 @@ from auth import Auth
 auth = Auth()
 
 # Register a new user
-auth.register_user("bob@bob.com", "mySuperPwd")
+email = "bob@bob.com"
+password = "mySuperPwd"
+auth.register_user(email, password)
+print(f"User {email} created")
 
-# Generate reset password token
-try:
-    reset_token = auth.get_reset_password_token("bob@bob.com")
-    print(f"Reset token: {reset_token}")
-except ValueError:
-    print("User not found")
+# Generate a reset password token
+reset_token = auth.get_reset_password_token(email)
+print(f"Reset token: {reset_token}")
 
-# Try to generate token for non-existent user
+# Update the password
 try:
-    reset_token = auth.get_reset_password_token("unknown@email.com")
-    print(f"Reset token: {reset_token}")
+    auth.update_password(reset_token, "newSuperPwd")
+    print("Password updated")
 except ValueError:
-    print("User not found")
+    print("Invalid reset token")
+
+# Verify the new password works
+if auth.valid_login(email, "newSuperPwd"):
+    print("New password is valid")
+else:
+    print("New password is invalid")
+
+# Try to update password with invalid token
+try:
+    auth.update_password("invalid_token", "anotherPassword")
+    print("Password updated")
+except ValueError:
+    print("Invalid reset token")

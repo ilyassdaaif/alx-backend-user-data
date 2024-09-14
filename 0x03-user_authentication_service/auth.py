@@ -48,16 +48,9 @@ class Auth:
         """If password is valid returns true, else, false"""
         try:
             user = self._db.find_user_by(email=email)
+            return bcrypt.checkpw(password.encode(), user.hashed_password.encode())
         except NoResultFound:
             return False
-
-        user_password = user.hashed_password
-        encoded_password = password.encode()
-
-        if bcrypt.checkpw(encoded_password, user_password):
-            return True
-
-        return False
 
     def create_session(self, email: str) -> str:
         """ Returns session ID for a user """
@@ -104,5 +97,18 @@ class Auth:
             reset_token = _generate_uuid()
             self._db.update_user(user.id, reset_token=reset_token)
             return reset_token
+        except NoResultFound:
+            raise ValueError
+
+    def update_password(self, reset_token: str, password: str) -> None:
+        """Update a user's password"""
+        try:
+            user = self._db.find_user_by(reset_token=reset_token)
+            hashed_password = _hash_password(password)
+            self._db.update_user(
+                    user.id,
+                    hashed_password=hashed_password.decode(),
+                    reset_token=None
+            )
         except NoResultFound:
             raise ValueError
