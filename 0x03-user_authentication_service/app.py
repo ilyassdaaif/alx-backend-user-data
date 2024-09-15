@@ -110,5 +110,29 @@ def get_reset_password_token():
         abort(403)
 
 
+@app.route('/reset_password', methods=['PUT'])
+def update_password():
+    """Update password end-point"""
+    # Extract form data
+    email = request.form.get('email')
+    reset_token = request.form.get('reset_token')
+    new_password = request.form.get('new_password')
+
+    # Check if all required fields are present
+    if not all([email, reset_token, new_password]):
+        abort(400)  # Bad Request if any field is missing
+
+    try:
+        # Attempt to update the password
+        AUTH.update_password(reset_token, new_password)
+
+        # If successful, return 200 status code with JSON payload
+        return jsonify({"email": email, "message": "Password updated"}), 200
+
+    except ValueError:
+        # If the token is invalid, return 403 Forbidden status
+        abort(403)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port="5000")
