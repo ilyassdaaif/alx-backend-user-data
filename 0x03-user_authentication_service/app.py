@@ -37,25 +37,25 @@ def register_user() -> str:
 
 
 @app.route('/sessions', methods=['POST'])
-def log_in() -> str:
-    """ Logs in a user and returns session ID """
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
     try:
-        email = request.form['email']
-        password = request.form['password']
-    except KeyError:
-        abort(400)
+        if not email or not password:
+            return jsonify({"error": "Missing email or password"}), 400
 
-    if not AUTH.valid_login(email, password):
-        abort(401)
+        user = Auth.find_user_by_email(email)
+        if not user or not Auth.is_valid_password(user, password):
+            return jsonify({"error": "Invalid credentials"}), 401
 
-    session_id = AUTH.create_session(email)
-
-    msg = {"email": email, "message": "logged in"}
-    response = jsonify(msg)
-
-    response.set_cookie("session_id", session_id)
-
-    return response
+        session_id = Auth.create_session(user.id)
+        response = jsonify({"email": user.email, "message": "logged in"})
+        response.set_cookie("session_id", session_id)
+        return response
+    except Exception as e:
+        print(f"Error during login: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @app.route('/sessions', methods=['DELETE'])
